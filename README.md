@@ -15,9 +15,9 @@ QUY LUẬT COMMIT:
 
 - KHI PULL PROJECT VỀ, TRƯỚC KHI BẮT ĐẦU CODE PHẢI "git checkout <tên nhánh của mình>"
 - KHI CODE XONG:
-B1: "git add ."
-B2: "git commit -m 'mô tả ngắn những gì đã làm'
-B3: "git checkout dev"
-B4: "git merge <tên nhánh của mình>"
-B5: "git push origin dev"
-B6: "git checkout <tên nhánh của mình>"
+	B1: "git add ."
+	B2: "git commit -m 'mô tả ngắn những gì đã làm'
+	B3: "git checkout frontend(hoặc backend)"
+	B4: "git merge <tên nhánh của mình>"
+	B5: "git push"
+	B6: "git checkout <tên nhánh của mình>"
