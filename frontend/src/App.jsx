@@ -1,6 +1,7 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useState } from 'react'
 import Auth from './pages/Auth'
-import ChatLayout from './components/ChatLayout'
+import Chat from './pages/Chat'
 import './App.css'
 
 function App() {
@@ -15,13 +16,15 @@ function App() {
   }
 
   return (
-    <>
-      {!user ? (
-        <Auth onLogin={handleLogin} />
-      ) : (
-        <ChatLayout user={user} onLogout={handleLogout} />
-      )}
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Auth onLogin={handleLogin} />} />
+        <Route 
+          path="/chat" 
+          element={user ? <Chat user={user} onLogout={handleLogout} /> : <Navigate to="/" />} 
+        />
+      </Routes>
+    </BrowserRouter>
   )
 }
 

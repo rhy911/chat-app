@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Auth.css';
 
 function Auth({ onLogin }) {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     phoneNumber: '',
@@ -17,7 +19,7 @@ function Auth({ onLogin }) {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!isLogin && formData.password !== formData.confirmPassword) {
@@ -25,15 +27,31 @@ function Auth({ onLogin }) {
       return;
     }
 
-    // For now, just simulate successful login
-    console.log(isLogin ? 'Logging in...' : 'Signing up...', formData);
-    
-    // Call the onLogin callback to show the chat interface
-    if (onLogin) {
-      onLogin({
-        username: formData.username || formData.phoneNumber,
-        phoneNumber: formData.phoneNumber
-      });
+    // Mock authentication - testing only
+    try {
+      console.log(isLogin ? 'Logging in...' : 'Signing up...', formData);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Mock successful authentication
+      const mockUser = {
+        id: '12345',
+        username: formData.username || 'TestUser',
+        phoneNumber: formData.phoneNumber,
+      };
+      
+      console.log('✅ Authentication successful!', mockUser);
+      alert(`${isLogin ? 'Login' : 'Signup'} successful! Welcome ${mockUser.username}`);
+      
+      // Call the onLogin callback and navigate to chat page
+      if (onLogin) {
+        onLogin(mockUser);
+      }
+      navigate('/chat');
+    } catch (error) {
+      console.error('❌ Authentication error:', error);
+      alert('Authentication failed. Please try again.');
     }
   };
 
