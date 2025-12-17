@@ -1,18 +1,25 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Auth from './pages/Auth'
 import Chat from './pages/Chat'
 import './App.css'
 
 function App() {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState(() => {
+    // Load user from localStorage on init
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  })
 
   const handleLogin = (userData) => {
     setUser(userData)
+    localStorage.setItem('user', JSON.stringify(userData))
   }
 
   const handleLogout = () => {
     setUser(null)
+    localStorage.removeItem('user')
+    localStorage.removeItem('accessToken')
   }
 
   return (

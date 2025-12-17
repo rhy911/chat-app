@@ -10,11 +10,11 @@ const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 60 * 1000; // 14 ngày
 
 export const signUp = async (req, res) => {
   try {
-    const { username, password, email, firstName, lastName } = req.body;
+    const { username, password, phoneNumber } = req.body;
 
-    if (!username || !password || !email || !firstName || !lastName) {
+    if (!username || !password || !phoneNumber) {
       return res.status(400).json({
-        message: "Không thể thiếu username, password, email, firstName, và lastName",
+        message: "Không thể thiếu username, password, và phoneNumber",
       });
     }
 
@@ -25,6 +25,13 @@ export const signUp = async (req, res) => {
       return res.status(409).json({ message: "username đã tồn tại" });
     }
 
+    // kiểm tra phoneNumber tồn tại chưa
+    const phoneExists = await User.findOne({ phoneNumber });
+
+    if (phoneExists) {
+      return res.status(409).json({ message: "phoneNumber đã tồn tại" });
+    }
+
     // mã hoá password
     const hashedPassword = await bcrypt.hash(password, 10); // salt = 10
 
@@ -32,8 +39,8 @@ export const signUp = async (req, res) => {
     await User.create({
       username,
       hashedPassword,
-      email,
-      displayName: `${lastName} ${firstName}`,
+      phoneNumber,
+      displayName: username, // use username as displayName
     });
 
     // return
@@ -46,29 +53,28 @@ export const signUp = async (req, res) => {
 
 export const signIn = async (req, res) => {
   try {
-    // lấy inputs
-    const { username, password } = req.body;
+    // lấy inputs - accept either username or phoneNumber
+    const { username, phoneNumber, password } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ message: "Thiếu username hoặc password." });
+    if ((!username && !phoneNumber) || !password) {
+      return res.status(400).json({ message: "Thiếu username/phoneNumber hoặc password." });
     }
 
     // lấy hashedPassword trong db để so với password input
-    const user = await User.findOne({ username });
+    // Allow login with either username or phoneNumber
+    const user = await User.findOne({
+      $or: [{ username: username || phoneNumber }, { phoneNumber: phoneNumber || username }],
+    });
 
     if (!user) {
-      return res
-        .status(401)
-        .json({ message: "username hoặc password không chính xác" });
+      return res.status(401).json({ message: "username/phoneNumber hoặc password không chính xác" });
     }
 
     // kiểm tra password
     const passwordCorrect = await bcrypt.compare(password, user.hashedPassword);
 
     if (!passwordCorrect) {
-      return res
-        .status(401)
-        .json({ message: "username hoặc password không chính xác" });
+      return res.status(401).json({ message: "username hoặc password không chính xác" });
     }
 
     // nếu khớp, tạo accessToken với JWT
@@ -97,10 +103,18 @@ export const signIn = async (req, res) => {
       maxAge: REFRESH_TOKEN_TTL,
     });
 
-    // trả access token về trong res
-    return res
-      .status(200)
-      .json({ message: `User ${user.displayName} đã logged in!`, accessToken });
+    // trả access token và user info về trong res
+    return res.status(200).json({
+      message: `User ${user.displayName} đã logged in!`,
+      accessToken,
+      user: {
+        _id: user._id,
+        username: user.username,
+        phoneNumber: user.phoneNumber,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+      },
+    });
   } catch (error) {
     console.error("Lỗi khi gọi signIn", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });

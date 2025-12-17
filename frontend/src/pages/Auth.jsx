@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
 import './Auth.css';
 
 function Auth({ onLogin }) {
@@ -27,31 +28,36 @@ function Auth({ onLogin }) {
       return;
     }
 
-    // Mock authentication - testing only
     try {
-      console.log(isLogin ? 'Logging in...' : 'Signing up...', formData);
+      let response;
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (isLogin) {
+        // Login - use phoneNumber to login
+        response = await authService.login({
+          phoneNumber: formData.phoneNumber,
+          password: formData.password,
+        });
+      } else {
+        // Register
+        response = await authService.register({
+          username: formData.username,
+          phoneNumber: formData.phoneNumber,
+          password: formData.password,
+        });
+      }
       
-      // Mock successful authentication
-      const mockUser = {
-        id: '12345',
-        username: formData.username || 'TestUser',
-        phoneNumber: formData.phoneNumber,
-      };
-      
-      console.log('✅ Authentication successful!', mockUser);
-      alert(`${isLogin ? 'Login' : 'Signup'} successful! Welcome ${mockUser.username}`);
+      console.log('✅ Authentication successful!', response);
+      alert(`${isLogin ? 'Login' : 'Signup'} successful! Welcome ${response.user?.username || 'User'}`);
       
       // Call the onLogin callback and navigate to chat page
       if (onLogin) {
-        onLogin(mockUser);
+        onLogin(response.user);
       }
       navigate('/chat');
     } catch (error) {
       console.error('❌ Authentication error:', error);
-      alert('Authentication failed. Please try again.');
+      const errorMessage = error.response?.data?.message || 'Authentication failed. Please try again.';
+      alert(errorMessage);
     }
   };
 
