@@ -10,10 +10,20 @@ import { protectedRoute } from "./middlewares/authMiddleware.js";
 import cors from "cors";
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
+import { createServer } from "http";
+import { Server } from "socket.io";
 
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+  },
+});
+
 const PORT = process.env.PORT || 5001;
 
 // middlewares
@@ -35,8 +45,39 @@ app.use("/api/users", userRoute);
 app.use("/api/messages", messageRoute);
 app.use("/api/conversations", conversationRoute);
 
+// Socket.io connection handling
+const userSocketMap = new Map(); // userId -> socketId
+
+io.on("connection", (socket) => {
+  console.log("✅ User connected:", socket.id);
+
+  // User joins with their userId
+  socket.on("join", (userId) => {
+    userSocketMap.set(userId, socket.id);
+    console.log(`📡 User ${userId} joined with socket ${socket.id}`);
+    console.log(`👥 Total connected users: ${userSocketMap.size}`);
+  });
+
+  // Handle disconnection
+  socket.on("disconnect", () => {
+    // Remove user from map
+    for (const [userId, socketId] of userSocketMap.entries()) {
+      if (socketId === socket.id) {
+        userSocketMap.delete(userId);
+        console.log(`❌ User ${userId} disconnected`);
+        console.log(`👥 Total connected users: ${userSocketMap.size}`);
+        break;
+      }
+    }
+  });
+});
+
+// Make io accessible to routes
+app.set("io", io);
+app.set("userSocketMap", userSocketMap);
+
 connectDB().then(() => {
-  app.listen(PORT, () => {
+  httpServer.listen(PORT, () => {
     console.log(`server bắt đầu trên cổng ${PORT}`);
   });
 });

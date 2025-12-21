@@ -290,6 +290,16 @@ h3 {
   }
 }
 
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
 .message.me {
   align-self: flex-end;
 }
@@ -316,6 +326,20 @@ h3 {
 .message.other .message-content {
   background: #e8ecef;
   color: #000000;
+}
+
+.message.sending {
+  opacity: 0.7;
+}
+
+.message.sending .message-content {
+  position: relative;
+}
+
+.message.sending .message-time::after {
+  content: "";
+  display: inline-block;
+  animation: blink 1s infinite;
 }
 
 .message-content p {

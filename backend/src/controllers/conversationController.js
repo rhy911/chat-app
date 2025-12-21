@@ -6,16 +6,8 @@ export const createConversation = async (req, res) => {
     const { type, name, memberIds } = req.body;
     const userId = req.user._id;
 
-    if (
-      !type ||
-      (type === "group" && !name) ||
-      !memberIds ||
-      !Array.isArray(memberIds) ||
-      memberIds.length === 0
-    ) {
-      return res
-        .status(400)
-        .json({ message: "Tên nhóm và danh sách thành viên là bắt buộc" });
+    if (!type || (type === "group" && !name) || !memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+      return res.status(400).json({ message: "Tên nhóm và danh sách thành viên là bắt buộc" });
     }
 
     let conversation;
@@ -58,7 +50,7 @@ export const createConversation = async (req, res) => {
     }
 
     await conversation.populate([
-      { path: "participants.userId", select: "displayName avatarUrl" },
+      { path: "participants.userId", select: "displayName avatarUrl username" },
       {
         path: "seenBy",
         select: "displayName avatarUrl",
@@ -66,7 +58,22 @@ export const createConversation = async (req, res) => {
       { path: "lastMessage.senderId", select: "displayName avatarUrl" },
     ]);
 
-    return res.status(201).json({ conversation });
+    // Format the conversation to match getConversations format
+    const participants = (conversation.participants || []).map((p) => ({
+      _id: p.userId?._id,
+      displayName: p.userId?.displayName,
+      username: p.userId?.username,
+      avatarUrl: p.userId?.avatarUrl ?? null,
+      joinedAt: p.joinedAt,
+    }));
+
+    const formattedConversation = {
+      ...conversation.toObject(),
+      participants,
+      unreadCounts: conversation.unreadCounts || {},
+    };
+
+    return res.status(201).json({ conversation: formattedConversation });
   } catch (error) {
     console.error("Lỗi khi tạo conversation", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });
@@ -82,7 +89,7 @@ export const getConversations = async (req, res) => {
       .sort({ lastMessageAt: -1, updatedAt: -1 })
       .populate({
         path: "participants.userId",
-        select: "displayName avatarUrl",
+        select: "displayName avatarUrl username",
       })
       .populate({
         path: "lastMessage.senderId",
@@ -97,6 +104,7 @@ export const getConversations = async (req, res) => {
       const participants = (convo.participants || []).map((p) => ({
         _id: p.userId?._id,
         displayName: p.userId?.displayName,
+        username: p.userId?.username,
         avatarUrl: p.userId?.avatarUrl ?? null,
         joinedAt: p.joinedAt,
       }));
