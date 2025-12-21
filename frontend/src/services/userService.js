@@ -12,4 +12,10 @@ export const userService = {
     const response = await api.get(`/users/search?query=${encodeURIComponent(query)}`);
     return response.data;
   },
+
+  // Update user profile
+  updateProfile: async (updateData) => {
+    const response = await api.put("/users/profile", updateData);
+    return response.data;
+  },
 };

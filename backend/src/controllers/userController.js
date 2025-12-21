@@ -36,3 +36,55 @@ export const searchUsers = async (req, res) => {
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
+
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { username, phoneNumber, about, displayName, avatarUrl } = req.body;
+
+    console.log("Update profile request:", { username, phoneNumber, about, displayName, avatarUrl: avatarUrl ? "has image" : "no image" });
+
+    // Check if username is being changed and if it's already taken
+    if (username) {
+      const existingUser = await User.findOne({
+        username,
+        _id: { $ne: userId },
+      });
+
+      if (existingUser) {
+        return res.status(400).json({ message: "Username đã được sử dụng" });
+      }
+    }
+
+    // Check if phone number is being changed and if it's already taken
+    if (phoneNumber) {
+      const existingUser = await User.findOne({
+        phoneNumber,
+        _id: { $ne: userId },
+      });
+
+      if (existingUser) {
+        return res.status(400).json({ message: "Số điện thoại đã được sử dụng" });
+      }
+    }
+
+    // Build update object
+    const updateData = {};
+    if (username) updateData.username = username;
+    if (phoneNumber) updateData.phoneNumber = phoneNumber;
+    if (about !== undefined) updateData.about = about;
+    if (displayName) updateData.displayName = displayName;
+    if (avatarUrl) updateData.avatarUrl = avatarUrl;
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(userId, { $set: updateData }, { new: true, runValidators: true }).select("-password");
+
+    return res.status(200).json({
+      message: "Cập nhật thông tin thành công",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Lỗi khi update profile", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};

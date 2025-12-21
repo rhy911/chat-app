@@ -113,6 +113,7 @@ export const signIn = async (req, res) => {
         phoneNumber: user.phoneNumber,
         displayName: user.displayName,
         avatarUrl: user.avatarUrl,
+        about: user.about,
       },
     });
   } catch (error) {
