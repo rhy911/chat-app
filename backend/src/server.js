@@ -12,6 +12,7 @@ import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import User from "./models/User.js";
 
 dotenv.config();
 
@@ -48,24 +49,65 @@ app.use("/api/conversations", conversationRoute);
 // Socket.io connection handling
 const userSocketMap = new Map(); // userId -> socketId
 
+// Helper function to get online users
+const getOnlineUsers = () => {
+  return Array.from(userSocketMap.keys());
+};
+
 io.on("connection", (socket) => {
   console.log("✅ User connected:", socket.id);
 
   // User joins with their userId
-  socket.on("join", (userId) => {
-    userSocketMap.set(userId, socket.id);
-    console.log(`📡 User ${userId} joined with socket ${socket.id}`);
-    console.log(`👥 Total connected users: ${userSocketMap.size}`);
+  socket.on("join", async (userId) => {
+    try {
+      userSocketMap.set(userId, socket.id);
+      console.log(`📡 User ${userId} joined with socket ${socket.id}`);
+      console.log(`👥 Total connected users: ${userSocketMap.size}`);
+
+      // Update user status to online
+      await User.findByIdAndUpdate(userId, {
+        isOnline: true,
+        lastSeen: new Date(),
+      });
+
+      // Broadcast to all clients that this user is online
+      io.emit("user-status-change", {
+        userId,
+        isOnline: true,
+      });
+
+      // Send the list of online users to the newly connected user
+      socket.emit("online-users", getOnlineUsers());
+    } catch (error) {
+      console.error("Error updating user status:", error);
+    }
   });
 
   // Handle disconnection
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     // Remove user from map
     for (const [userId, socketId] of userSocketMap.entries()) {
       if (socketId === socket.id) {
-        userSocketMap.delete(userId);
-        console.log(`❌ User ${userId} disconnected`);
-        console.log(`👥 Total connected users: ${userSocketMap.size}`);
+        try {
+          userSocketMap.delete(userId);
+          console.log(`❌ User ${userId} disconnected`);
+          console.log(`👥 Total connected users: ${userSocketMap.size}`);
+
+          // Update user status to offline
+          await User.findByIdAndUpdate(userId, {
+            isOnline: false,
+            lastSeen: new Date(),
+          });
+
+          // Broadcast to all clients that this user is offline
+          io.emit("user-status-change", {
+            userId,
+            isOnline: false,
+            lastSeen: new Date(),
+          });
+        } catch (error) {
+          console.error("Error updating user status:", error);
+        }
         break;
       }
     }

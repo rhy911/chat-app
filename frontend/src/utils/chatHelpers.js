@@ -53,3 +53,11 @@ export const getUserAvatarUrl = (user) => {
   const name = user?.displayName || user?.username || "User";
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=150`;
 };
+
+// Get other participant from conversation
+export const getOtherParticipant = (conversation, currentUserId) => {
+  if (conversation.type === "group") {
+    return null;
+  }
+  return conversation.participants.find((p) => p._id !== currentUserId);
+};

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Auth from './pages/Auth'
 import Chat from './pages/Chat'
 import Settings from './pages/Settings'
+import { socketService } from './services/socketService'
 import './App.css'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
   }
 
   const handleLogout = () => {
+    socketService.disconnect()
     setUser(null)
     localStorage.removeItem('user')
     localStorage.removeItem('accessToken')

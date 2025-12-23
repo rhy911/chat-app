@@ -12,6 +12,11 @@ const Settings = ({ user, onLogout, onUserUpdate }) => {
     about: ''
   });
   const [profileImage, setProfileImage] = useState(user?.avatarUrl || null);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -94,6 +99,56 @@ const Settings = ({ user, onLogout, onUserUpdate }) => {
       about: ''
     });
     navigate('/chat');
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleChangePassword = async () => {
+    try {
+      if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+        alert('Please fill in all password fields');
+        return;
+      }
+
+      if (passwordData.newPassword !== passwordData.confirmPassword) {
+        alert('New passwords do not match');
+        return;
+      }
+
+      if (passwordData.newPassword.length < 6) {
+        alert('New password must be at least 6 characters long');
+        return;
+      }
+
+      // Call API to change password
+      await userService.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+
+      alert('Password changed successfully!');
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error) {
+      console.error('Error changing password:', error);
+      alert('Failed to change password: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to log out?')) {
+      onLogout();
+      navigate('/');
+    }
   };
 
   return (
@@ -252,7 +307,66 @@ const Settings = ({ user, onLogout, onUserUpdate }) => {
         {activeTab === 'account' && (
           <div className="tab-content">
             <h1>Account</h1>
-            <p>Account settings will be displayed here.</p>
+            
+            <div className="account-section">
+              <h2>Change Password</h2>
+              <form className="password-form">
+                <div className="form-group">
+                  <label htmlFor="currentPassword">Current Password</label>
+                  <input
+                    type="password"
+                    id="currentPassword"
+                    name="currentPassword"
+                    value={passwordData.currentPassword}
+                    onChange={handlePasswordChange}
+                    placeholder="Enter current password"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="newPassword">New Password</label>
+                  <input
+                    type="password"
+                    id="newPassword"
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    placeholder="Enter new password"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="confirmPassword">Confirm New Password</label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    placeholder="Confirm new password"
+                  />
+                </div>
+
+                <button type="button" className="btn-change-password" onClick={handleChangePassword}>
+                  Change Password
+                </button>
+              </form>
+            </div>
+
+            <div className="account-section danger-zone">
+              <h2>Danger Zone</h2>
+              <div className="account-actions">
+                <div className="action-item">
+                  <div className="action-info">
+                    <h3>Log Out</h3>
+                    <p>Sign out from your account on this device</p>
+                  </div>
+                  <button className="btn-logout" onClick={handleLogout}>
+                    Log Out
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
-import { getConversationName, getConversationAvatar, formatTime, getMessageSenderId } from '../../utils/chatHelpers';
+import { getConversationName, getConversationAvatar, formatTime, getMessageSenderId, getOtherParticipant } from '../../utils/chatHelpers';
+import StatusIndicator from '../../components/StatusIndicator';
 
 function ChatArea({ 
   user, 
@@ -8,7 +9,8 @@ function ChatArea({
   inputMessage,
   onInputChange,
   onSendMessage,
-  onToggleContactInfo 
+  onToggleContactInfo,
+  isUserOnline
 }) {
   const messagesEndRef = useRef(null);
 
@@ -27,6 +29,9 @@ function ChatArea({
     );
   }
 
+  const otherUser = getOtherParticipant(selectedConversation, user?._id);
+  const online = otherUser && isUserOnline && isUserOnline(otherUser._id);
+
   return (
     <div className="chat-area">
       <div className="chat-header">
@@ -36,7 +41,11 @@ function ChatArea({
           </div>
           <div>
             <h3>{getConversationName(selectedConversation, user?._id)}</h3>
-            <span className="status">Online</span>
+            {selectedConversation.type !== 'group' && (
+              <span className="status">
+                <StatusIndicator isOnline={online} showText={true} />
+              </span>
+            )}
           </div>
         </div>
         <div className="chat-actions">

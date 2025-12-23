@@ -5,6 +5,7 @@ export const useSocket = (userId, selectedConversationId, onNewMessage, onConver
   useEffect(() => {
     if (!userId) return;
 
+    // Connect to socket only once with userId
     socketService.connect(userId);
 
     const handleNewMessage = ({ message, conversationId }) => {
@@ -28,7 +29,7 @@ export const useSocket = (userId, selectedConversationId, onNewMessage, onConver
 
     return () => {
       socketService.off("new_message");
-      socketService.disconnect();
+      // Don't disconnect on cleanup - socket should persist across the app
     };
   }, [userId, selectedConversationId, onNewMessage, onConversationsUpdate]);
 };

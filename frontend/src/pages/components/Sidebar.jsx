@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { getUserAvatarUrl, getConversationName, getConversationAvatar, formatTime, formatMessagePreview } from '../../utils/chatHelpers';
+import { getUserAvatarUrl, getConversationName, getConversationAvatar, formatTime, formatMessagePreview, getOtherParticipant } from '../../utils/chatHelpers';
+import StatusIndicator from '../../components/StatusIndicator';
 
 function Sidebar({ 
   user, 
@@ -10,7 +11,8 @@ function Sidebar({
   onSearchChange,
   searchResults,
   isSearching,
-  onSelectSearchResult
+  onSelectSearchResult,
+  isUserOnline
 }) {
   const navigate = useNavigate();
 
@@ -67,8 +69,13 @@ function Sidebar({
                 className="conversation"
                 onClick={() => onSelectSearchResult(searchUser)}
               >
-                <div className="avatar">
-                  <img src={getUserAvatarUrl(searchUser)} alt={searchUser.displayName} />
+                <div className="avatar-wrapper">
+                  <div className="avatar">
+                    <img src={getUserAvatarUrl(searchUser)} alt={searchUser.displayName} />
+                  </div>
+                  <div className="status-badge">
+                    <StatusIndicator isOnline={isUserOnline && isUserOnline(searchUser._id)} />
+                  </div>
                 </div>
                 <div className="conversation-info">
                   <h3>{searchUser.displayName || searchUser.username}</h3>
@@ -88,24 +95,34 @@ function Sidebar({
             No conversations yet
           </div>
         ) : (
-          conversations.map((conversation) => (
-            <div
-              key={conversation._id}
-              className={`conversation ${selectedConversation?._id === conversation._id ? 'active' : ''}`}
-              onClick={() => onSelectConversation(conversation)}
-            >
-              <div className="avatar">
-                <img src={getConversationAvatar(conversation, user?._id)} alt={getConversationName(conversation, user?._id)} />
+          conversations.map((conversation) => {
+            const otherUser = getOtherParticipant(conversation, user?._id);
+            return (
+              <div
+                key={conversation._id}
+                className={`conversation ${selectedConversation?._id === conversation._id ? 'active' : ''}`}
+                onClick={() => onSelectConversation(conversation)}
+              >
+                <div className="avatar-wrapper">
+                  <div className="avatar">
+                    <img src={getConversationAvatar(conversation, user?._id)} alt={getConversationName(conversation, user?._id)} />
+                  </div>
+                  {otherUser && (
+                    <div className="status-badge">
+                      <StatusIndicator isOnline={isUserOnline && isUserOnline(otherUser._id)} />
+                    </div>
+                  )}
+                </div>
+                <div className="conversation-info">
+                  <h3>{getConversationName(conversation, user?._id)}</h3>
+                  <p>{formatMessagePreview(conversation.lastMessage)}</p>
+                </div>
+                <span className="time">
+                  {conversation.lastMessageAt ? formatTime(conversation.lastMessageAt) : ''}
+                </span>
               </div>
-              <div className="conversation-info">
-                <h3>{getConversationName(conversation, user?._id)}</h3>
-                <p>{formatMessagePreview(conversation.lastMessage)}</p>
-              </div>
-              <span className="time">
-                {conversation.lastMessageAt ? formatTime(conversation.lastMessageAt) : ''}
-              </span>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

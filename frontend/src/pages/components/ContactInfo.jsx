@@ -1,6 +1,7 @@
-import { getConversationName, getConversationAvatar, getConversationAbout } from '../../utils/chatHelpers';
+import { getConversationName, getConversationAvatar, getConversationAbout, getOtherParticipant } from '../../utils/chatHelpers';
+import StatusIndicator from '../../components/StatusIndicator';
 
-function ContactInfo({ selectedConversation, user, onClose }) {
+function ContactInfo({ selectedConversation, user, onClose, isUserOnline }) {
   if (!selectedConversation) return null;
 
   return (
@@ -20,7 +21,15 @@ function ContactInfo({ selectedConversation, user, onClose }) {
           <img src={getConversationAvatar(selectedConversation, user?._id)} alt={getConversationName(selectedConversation, user?._id)} />
         </div>
         <h2>{getConversationName(selectedConversation, user?._id)}</h2>
-        <span className="online-status">Online</span>
+        {selectedConversation.type !== 'group' && (() => {
+          const otherUser = getOtherParticipant(selectedConversation, user?._id);
+          const online = otherUser && isUserOnline && isUserOnline(otherUser._id);
+          return (
+            <span className="online-status">
+              <StatusIndicator isOnline={online} showText={true} size="medium" />
+            </span>
+          );
+        })()}
       </div>
 
       <div className="contact-actions">

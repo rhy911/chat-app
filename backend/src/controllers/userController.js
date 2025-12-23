@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import bcrypt from "bcrypt";
 
 export const authMe = async (req, res) => {
   try {
@@ -85,6 +86,47 @@ export const updateProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi khi update profile", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const changePassword = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Thiếu mật khẩu hiện tại hoặc mật khẩu mới" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự" });
+    }
+
+    // Get user with password
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    }
+
+    // Verify current password
+    const isPasswordCorrect = await bcrypt.compare(currentPassword, user.hashedPassword);
+    if (!isPasswordCorrect) {
+      return res.status(401).json({ message: "Mật khẩu hiện tại không chính xác" });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    user.hashedPassword = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({
+      message: "Đổi mật khẩu thành công",
+    });
+  } catch (error) {
+    console.error("Lỗi khi đổi mật khẩu", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };

@@ -4,6 +4,7 @@ class SocketService {
   constructor() {
     this.socket = null;
     this.listeners = new Map();
+    this.onlineUsers = new Set();
   }
 
   connect(userId) {
@@ -38,6 +39,32 @@ class SocketService {
     this.socket.on("connect_error", (error) => {
       console.error("❌ Socket connection error:", error);
     });
+
+    // Listen for online users list
+    this.socket.on("online-users", (users) => {
+      console.log("📋 Online users received:", users);
+      this.onlineUsers = new Set(users);
+
+      // Propagate to external listeners
+      const callback = this.listeners.get("online-users");
+      if (callback) callback(users);
+    });
+
+    // Listen for user status changes
+    this.socket.on("user-status-change", (data) => {
+      const { userId, isOnline, lastSeen } = data;
+      console.log(`👤 User ${userId} is now ${isOnline ? "online" : "offline"}`);
+
+      if (isOnline) {
+        this.onlineUsers.add(userId);
+      } else {
+        this.onlineUsers.delete(userId);
+      }
+
+      // Propagate to external listeners
+      const callback = this.listeners.get("user-status-change");
+      if (callback) callback(data);
+    });
   }
 
   disconnect() {
@@ -45,7 +72,16 @@ class SocketService {
       this.socket.disconnect();
       this.socket = null;
       this.listeners.clear();
+      this.onlineUsers.clear();
     }
+  }
+
+  isUserOnline(userId) {
+    return this.onlineUsers.has(userId);
+  }
+
+  getOnlineUsers() {
+    return Array.from(this.onlineUsers);
   }
 
   on(event, callback) {
@@ -55,7 +91,14 @@ class SocketService {
     }
 
     console.log("👂 Registering listener for event:", event);
-    // Store listener for cleanup
+
+    // For status events, just store the callback (already listening internally)
+    if (event === "online-users" || event === "user-status-change") {
+      this.listeners.set(event, callback);
+      return;
+    }
+
+    // For other events, add socket listener
     this.listeners.set(event, callback);
     this.socket.on(event, callback);
   }
@@ -67,6 +110,13 @@ class SocketService {
 
     const callback = this.listeners.get(event);
     if (callback) {
+      // For status events, just remove from listeners (don't remove socket listener)
+      if (event === "online-users" || event === "user-status-change") {
+        this.listeners.delete(event);
+        return;
+      }
+
+      // For other events, remove socket listener
       this.socket.off(event, callback);
       this.listeners.delete(event);
     }

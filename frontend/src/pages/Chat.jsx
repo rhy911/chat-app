@@ -6,6 +6,7 @@ import { userService } from '../services/userService';
 import { useSocket } from '../hooks/useSocket';
 import { useConversations } from '../hooks/useConversations';
 import { useMessages } from '../hooks/useMessages';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import ContactInfo from './components/ContactInfo';
@@ -23,6 +24,7 @@ function Chat({ user, onLogout }) {
   // Custom hooks
   const { conversations, loading, fetchConversations, updateConversation } = useConversations();
   const { messages, fetchMessages, addMessage, sendMessage } = useMessages();
+  const { isUserOnline } = useOnlineStatus();
 
   // Socket handlers
   const handleNewMessage = useCallback((message) => {
@@ -158,6 +160,7 @@ function Chat({ user, onLogout }) {
         searchResults={searchResults}
         isSearching={isSearching}
         onSelectSearchResult={handleSelectSearchResult}
+        isUserOnline={isUserOnline}
       />
 
       <ChatArea 
@@ -168,6 +171,7 @@ function Chat({ user, onLogout }) {
         onInputChange={setInputMessage}
         onSendMessage={handleSendMessage}
         onToggleContactInfo={() => setShowContactInfo(!showContactInfo)}
+        isUserOnline={isUserOnline}
       />
 
       {showContactInfo && (
@@ -175,6 +179,7 @@ function Chat({ user, onLogout }) {
           selectedConversation={selectedConversation}
           user={user}
           onClose={() => setShowContactInfo(false)}
+          isUserOnline={isUserOnline}
         />
       )}
     </div>
