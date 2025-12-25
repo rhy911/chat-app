@@ -19,4 +19,16 @@ export const messageService = {
     });
     return response.data;
   },
+
+  // Mark a message as read
+  markMessageAsRead: async (messageId) => {
+    const response = await api.patch(`/messages/${messageId}/read`);
+    return response.data;
+  },
+
+  // Mark all messages in a conversation as read
+  markConversationAsRead: async (conversationId) => {
+    const response = await api.patch(`/messages/conversation/${conversationId}/read`);
+    return response.data;
+  },
 };

@@ -2,6 +2,50 @@ import { useRef, useEffect } from 'react';
 import { getConversationName, getConversationAvatar, formatTime, getMessageSenderId, getOtherParticipant } from '../../utils/chatHelpers';
 import StatusIndicator from '../../components/StatusIndicator';
 
+// Message status icons
+const MessageStatusIcon = ({ status }) => {
+  if (status === 'sending') {
+    return <span style={{ color: '#999', marginLeft: '4px' }}>⏱</span>;
+  } else if (status === 'sent') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginLeft: '4px', verticalAlign: 'middle' }}>
+        <path d="M13.5 4L6 11.5L2.5 8" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    );
+  } else if (status === 'delivered') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginLeft: '4px', verticalAlign: 'middle' }}>
+        <path d="M13.5 4L6 11.5L2.5 8" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M13.5 4L6 11.5" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" transform="translate(2, 0)"/>
+      </svg>
+    );
+  } else if (status === 'read') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginLeft: '4px', verticalAlign: 'middle' }}>
+        <path d="M13.5 4L6 11.5L2.5 8" stroke="#4fc3f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M13.5 4L6 11.5" stroke="#4fc3f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" transform="translate(2, 0)"/>
+      </svg>
+    );
+  }
+  return null;
+};
+
+// Typing indicator component
+const TypingIndicator = ({ userName }) => {
+  return (
+    <div className="typing-indicator-container" style={{ padding: '10px 20px' }}>
+      <div className="typing-indicator">
+        <span className="typing-dot"></span>
+        <span className="typing-dot"></span>
+        <span className="typing-dot"></span>
+      </div>
+      <span style={{ marginLeft: '8px', fontSize: '14px', color: '#999' }}>
+        {userName} is typing...
+      </span>
+    </div>
+  );
+};
+
 function ChatArea({ 
   user, 
   selectedConversation, 
@@ -10,14 +54,15 @@ function ChatArea({
   onInputChange,
   onSendMessage,
   onToggleContactInfo,
-  isUserOnline
+  isUserOnline,
+  usersTyping = []
 }) {
   const messagesEndRef = useRef(null);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, usersTyping]);
 
   if (!selectedConversation) {
     return (
@@ -31,6 +76,14 @@ function ChatArea({
 
   const otherUser = getOtherParticipant(selectedConversation, user?._id);
   const online = otherUser && isUserOnline && isUserOnline(otherUser._id);
+  
+  // Get typing users names
+  const typingUserNames = usersTyping
+    .map(userId => {
+      const participant = selectedConversation.participants.find(p => p._id === userId);
+      return participant?.displayName || participant?.username || 'Someone';
+    })
+    .filter(Boolean);
 
   return (
     <div className="chat-area">
@@ -77,23 +130,30 @@ function ChatArea({
         ) : (
           messages.map((message) => {
             const messageSenderId = getMessageSenderId(message);
+            const isOwnMessage = messageSenderId === user?._id;
             
             return (
               <div 
                 key={message._id} 
-                className={`message ${messageSenderId === user?._id ? 'me' : 'other'} ${message.status === 'sending' ? 'sending' : ''}`}
+                className={`message ${isOwnMessage ? 'me' : 'other'} ${message.status === 'sending' ? 'sending' : ''}`}
               >
                 <div className="message-content">
                   <p>{message.content}</p>
                 </div>
                 <span className="message-time">
                   {formatTime(message.createdAt)}
-                  {message.status === 'sending' && ' •'}
+                  {isOwnMessage && <MessageStatusIcon status={message.status} />}
                 </span>
               </div>
             );
           })
         )}
+        
+        {/* Typing indicator */}
+        {typingUserNames.length > 0 && (
+          <TypingIndicator userName={typingUserNames[0]} />
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
 

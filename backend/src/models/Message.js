@@ -20,6 +20,31 @@ const messageSchema = new mongoose.Schema(
     imgUrl: {
       type: String,
     },
+    status: {
+      type: String,
+      enum: ["sending", "sent", "delivered", "read"],
+      default: "sent",
+    },
+    deliveredTo: [{
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      deliveredAt: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
+    readBy: [{
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      readAt: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
   },
   {
     timestamps: true,

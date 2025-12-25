@@ -33,6 +33,7 @@ export const sendDirectMessage = async (req, res) => {
       conversationId: conversation._id,
       senderId,
       content,
+      status: "sent",
     });
 
     updateConversationAfterCreateMessage(conversation, message, senderId);
@@ -99,6 +100,7 @@ export const sendGroupMessage = async (req, res) => {
       conversationId,
       senderId,
       content,
+      status: "sent",
     });
 
     updateConversationAfterCreateMessage(conversation, message, senderId);
@@ -131,5 +133,102 @@ export const sendGroupMessage = async (req, res) => {
   } catch (error) {
     console.error("Lỗi xảy ra khi gửi tin nhắn nhóm", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const markMessageAsRead = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user._id;
+
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    // Check if already read by this user
+    const alreadyRead = message.readBy.some(
+      (read) => read.userId.toString() === userId.toString()
+    );
+
+    if (!alreadyRead) {
+      message.readBy.push({
+        userId,
+        readAt: new Date(),
+      });
+
+      // Update status
+      if (message.senderId.toString() !== userId.toString()) {
+        message.status = "read";
+      }
+
+      await message.save();
+
+      // Emit Socket.io event to notify sender
+      const io = req.app.get("io");
+      const userSocketMap = req.app.get("userSocketMap");
+
+      const senderSocketId = userSocketMap.get(message.senderId.toString());
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("message-status-update", {
+          messageId: message._id,
+          conversationId: message.conversationId,
+          status: "read",
+          userId: userId.toString(),
+        });
+      }
+    }
+
+    return res.status(200).json({ message: "Message marked as read" });
+  } catch (error) {
+    console.error("Error marking message as read:", error);
+    return res.status(500).json({ message: "System error" });
+  }
+};
+
+export const markConversationAsRead = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user._id;
+
+    // Find all unread messages in this conversation
+    const messages = await Message.find({
+      conversationId,
+      senderId: { $ne: userId },
+      "readBy.userId": { $ne: userId },
+    });
+
+    const io = req.app.get("io");
+    const userSocketMap = req.app.get("userSocketMap");
+
+    // Mark each message as read
+    for (const message of messages) {
+      message.readBy.push({
+        userId,
+        readAt: new Date(),
+      });
+      message.status = "read";
+      await message.save();
+
+      // Notify sender
+      const senderSocketId = userSocketMap.get(message.senderId.toString());
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("message-status-update", {
+          messageId: message._id,
+          conversationId: message.conversationId,
+          status: "read",
+          userId: userId.toString(),
+        });
+      }
+    }
+
+    return res.status(200).json({ 
+      message: "Conversation marked as read",
+      updatedCount: messages.length 
+    });
+  } catch (error) {
+    console.error("Error marking conversation as read:", error);
+    return res.status(500).json({ message: "System error" });
   }
 };

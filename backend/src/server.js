@@ -83,6 +83,63 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Handle typing indicator
+  socket.on("typing", (data) => {
+    const { conversationId, userId } = data;
+    console.log(`⌨️ User ${userId} is typing in conversation ${conversationId}`);
+    
+    // Broadcast to other participants in the conversation
+    socket.broadcast.emit("user-typing", {
+      conversationId,
+      userId,
+    });
+  });
+
+  socket.on("stop-typing", (data) => {
+    const { conversationId, userId } = data;
+    console.log(`🛑 User ${userId} stopped typing in conversation ${conversationId}`);
+    
+    // Broadcast to other participants in the conversation
+    socket.broadcast.emit("user-stopped-typing", {
+      conversationId,
+      userId,
+    });
+  });
+
+  // Handle message status updates
+  socket.on("message-delivered", async (data) => {
+    const { messageId, userId } = data;
+    try {
+      console.log(`✅ Message ${messageId} delivered to user ${userId}`);
+      
+      // Broadcast delivery status to sender
+      socket.broadcast.emit("message-status-update", {
+        messageId,
+        status: "delivered",
+        userId,
+      });
+    } catch (error) {
+      console.error("Error updating message delivery status:", error);
+    }
+  });
+
+  socket.on("message-read", async (data) => {
+    const { messageId, conversationId, userId } = data;
+    try {
+      console.log(`👁️ Message ${messageId} read by user ${userId}`);
+      
+      // Broadcast read status to sender
+      socket.broadcast.emit("message-status-update", {
+        messageId,
+        conversationId,
+        status: "read",
+        userId,
+      });
+    } catch (error) {
+      console.error("Error updating message read status:", error);
+    }
+  });
+
   // Handle disconnection
   socket.on("disconnect", async () => {
     // Remove user from map

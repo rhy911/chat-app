@@ -65,6 +65,23 @@ class SocketService {
       const callback = this.listeners.get("user-status-change");
       if (callback) callback(data);
     });
+
+    // Listen for typing indicators
+    this.socket.on("user-typing", (data) => {
+      const callback = this.listeners.get("user-typing");
+      if (callback) callback(data);
+    });
+
+    this.socket.on("user-stopped-typing", (data) => {
+      const callback = this.listeners.get("user-stopped-typing");
+      if (callback) callback(data);
+    });
+
+    // Listen for message status updates
+    this.socket.on("message-status-update", (data) => {
+      const callback = this.listeners.get("message-status-update");
+      if (callback) callback(data);
+    });
   }
 
   disconnect() {
@@ -92,8 +109,12 @@ class SocketService {
 
     console.log("👂 Registering listener for event:", event);
 
-    // For status events, just store the callback (already listening internally)
-    if (event === "online-users" || event === "user-status-change") {
+    // For status events and typing events, just store the callback (already listening internally)
+    if (event === "online-users" || 
+        event === "user-status-change" || 
+        event === "user-typing" || 
+        event === "user-stopped-typing" ||
+        event === "message-status-update") {
       this.listeners.set(event, callback);
       return;
     }
@@ -110,8 +131,12 @@ class SocketService {
 
     const callback = this.listeners.get(event);
     if (callback) {
-      // For status events, just remove from listeners (don't remove socket listener)
-      if (event === "online-users" || event === "user-status-change") {
+      // For status/typing events, just remove from listeners (don't remove socket listener)
+      if (event === "online-users" || 
+          event === "user-status-change" || 
+          event === "user-typing" || 
+          event === "user-stopped-typing" ||
+          event === "message-status-update") {
         this.listeners.delete(event);
         return;
       }
@@ -130,6 +155,24 @@ class SocketService {
 
     console.log("📤 Emitting event:", event, data);
     this.socket.emit(event, data);
+  }
+
+  // Typing indicator methods
+  sendTyping(conversationId, userId) {
+    this.emit("typing", { conversationId, userId });
+  }
+
+  sendStopTyping(conversationId, userId) {
+    this.emit("stop-typing", { conversationId, userId });
+  }
+
+  // Message status methods
+  sendMessageDelivered(messageId, userId) {
+    this.emit("message-delivered", { messageId, userId });
+  }
+
+  sendMessageRead(messageId, conversationId, userId) {
+    this.emit("message-read", { messageId, conversationId, userId });
   }
 }
 

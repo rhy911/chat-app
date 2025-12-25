@@ -12,6 +12,8 @@ export const signUp = async (req, res) => {
   try {
     const { username, password, phoneNumber } = req.body;
 
+    console.log("📝 SignUp Request Body:", { username, phoneNumber }); // Debug log
+
     if (!username || !password || !phoneNumber) {
       return res.status(400).json({
         message: "Không thể thiếu username, password, và phoneNumber",
@@ -36,12 +38,18 @@ export const signUp = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10); // salt = 10
 
     // tạo user mới
-    await User.create({
+    const newUser = await User.create({
       username,
       hashedPassword,
       phoneNumber,
       displayName: username, // use username as displayName
     });
+
+    console.log("✅ User created successfully:", { 
+      _id: newUser._id, 
+      username: newUser.username, 
+      phoneNumber: newUser.phoneNumber 
+    }); // Debug log
 
     // return
     return res.sendStatus(204);

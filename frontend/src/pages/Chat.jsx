@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { conversationService } from '../services/conversationService';
 import { authService } from '../services/authService';
 import { userService } from '../services/userService';
+import { socketService } from '../services/socketService';
 import { useSocket } from '../hooks/useSocket';
 import { useConversations } from '../hooks/useConversations';
 import { useMessages } from '../hooks/useMessages';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { useTyping } from '../hooks/useTyping';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import ContactInfo from './components/ContactInfo';
@@ -23,8 +25,9 @@ function Chat({ user, onLogout }) {
 
   // Custom hooks
   const { conversations, loading, fetchConversations, updateConversation } = useConversations();
-  const { messages, fetchMessages, addMessage, sendMessage } = useMessages();
+  const { messages, fetchMessages, addMessage, sendMessage, updateMessageStatus, markConversationAsRead } = useMessages();
   const { isUserOnline } = useOnlineStatus();
+  const { usersTyping, startTyping, stopTyping } = useTyping(user?._id, selectedConversation?._id);
 
   // Socket handlers
   const handleNewMessage = useCallback((message) => {
@@ -34,6 +37,20 @@ function Chat({ user, onLogout }) {
   const handleConversationsUpdate = useCallback((conversationId, message) => {
     updateConversation(conversationId, message);
   }, [updateConversation]);
+
+  // Handle message status updates
+  useEffect(() => {
+    const handleMessageStatusUpdate = (data) => {
+      const { messageId, status } = data;
+      updateMessageStatus(messageId, status);
+    };
+
+    socketService.on('message-status-update', handleMessageStatusUpdate);
+
+    return () => {
+      socketService.off('message-status-update');
+    };
+  }, [updateMessageStatus]);
 
   useSocket(
     user?._id, 
@@ -58,8 +75,10 @@ function Chat({ user, onLogout }) {
   useEffect(() => {
     if (selectedConversation) {
       fetchMessages(selectedConversation._id);
+      // Mark conversation as read when opened
+      markConversationAsRead(selectedConversation._id);
     }
-  }, [selectedConversation, fetchMessages]);
+  }, [selectedConversation, fetchMessages, markConversationAsRead]);
 
   // Refetch conversations when returning to the page
   useEffect(() => {
@@ -83,12 +102,23 @@ function Chat({ user, onLogout }) {
   }, [user?.avatarUrl, user?.about, user?.username, user?.phoneNumber, fetchConversations]);
 
   // Handlers
+  const handleInputChange = (value) => {
+    setInputMessage(value);
+    
+    if (value.trim()) {
+      startTyping();
+    } else {
+      stopTyping();
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputMessage.trim() || !selectedConversation) return;
 
     const messageContent = inputMessage;
     setInputMessage('');
+    stopTyping(); // Stop typing when sending
 
     try {
       await sendMessage(user?._id, selectedConversation, messageContent);
@@ -168,10 +198,11 @@ function Chat({ user, onLogout }) {
         selectedConversation={selectedConversation}
         messages={messages}
         inputMessage={inputMessage}
-        onInputChange={setInputMessage}
+        onInputChange={handleInputChange}
         onSendMessage={handleSendMessage}
         onToggleContactInfo={() => setShowContactInfo(!showContactInfo)}
         isUserOnline={isUserOnline}
+        usersTyping={usersTyping}
       />
 
       {showContactInfo && (

@@ -42,6 +42,14 @@ export const useMessages = () => {
     });
   }, []);
 
+  const updateMessageStatus = useCallback((messageId, status) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m._id === messageId ? { ...m, status } : m
+      )
+    );
+  }, []);
+
   const addOptimisticMessage = useCallback((optimisticMessage) => {
     setMessages((prev) => [...prev, optimisticMessage]);
   }, []);
@@ -96,11 +104,21 @@ export const useMessages = () => {
     [addOptimisticMessage, removeMessage]
   );
 
+  const markConversationAsRead = useCallback(async (conversationId) => {
+    try {
+      await messageService.markConversationAsRead(conversationId);
+    } catch (error) {
+      console.error("Error marking conversation as read:", error);
+    }
+  }, []);
+
   return {
     messages,
     setMessages,
     fetchMessages,
     addMessage,
     sendMessage,
+    updateMessageStatus,
+    markConversationAsRead,
   };
 };
